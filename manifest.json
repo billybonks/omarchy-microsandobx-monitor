@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "local.microsandbox",
+  "name": "Microsandbox",
+  "version": "0.1.0",
+  "author": "billybonks",
+  "license": "MIT",
+  "description": "A local microsandbox dashboard backed by the Rust SDK. Uses your existing runtime.",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "ui/DisclosureWidget.qml" },
+  "barWidget": {
+    "displayName": "Microsandbox",
+    "description": "Sandbox status, resources, ports, and lifecycle controls",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
