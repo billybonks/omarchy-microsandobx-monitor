@@ -3,7 +3,7 @@ import qs.Ui as Ui
 
 Ui.BarWidget {
   id: root
-  moduleName: "local.microsandbox"
+  moduleName: "billybonks.microsandbox-monitor"
   readonly property bool opened: panel.opened
   readonly property bool popoutSwitchClosing: panel.popoutSwitchClosing
 

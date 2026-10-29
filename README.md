@@ -1,4 +1,8 @@
-# Microsandbox for Omarchy
+# Microsandbox Monitor
+
+[![Checks](https://github.com/billybonks/omarchy-microsandobx-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/billybonks/omarchy-microsandobx-monitor/actions/workflows/ci.yml)
+
+An independent community plugin by **billybonks**, licensed under [MIT](LICENSE). Not an official microsandbox or Omarchy product.
 
 A native Omarchy top-bar widget and dropdown for your **existing local microsandbox installation**. This is not a TUI, WebView, or second desktop-shell process.
 
@@ -13,6 +17,18 @@ A native Omarchy top-bar widget and dropdown for your **existing local microsand
 - Expansion is tracked by sandbox identity, so refreshes and reordered rows preserve it for the current panel session.
 - Arrow keys/j/k select; Enter/Space expands/collapses; s opens a shell; g follows logs; x asks to remove; r refreshes; Escape closes. Start/stop uses its explicit button inside the expanded details.
 
+## Screenshots
+
+### Collapsed — CPU and memory usage at a glance
+
+![Collapsed sandbox row showing CPU and RAM usage percentages](docs/screenshots/collapsed.png)
+
+### Expanded — resource usage, allocations, ports, and controls
+
+![Expanded sandbox row showing resource usage bars and lifecycle controls](docs/screenshots/expanded.png)
+
+Screenshots supplied by the author; the visible sandbox name and loopback port are example workload details, not credentials. The expanded view is also provided as [`preview.png`](preview.png) for the marketplace.
+
 ## Architecture
 
 `ui/DisclosureWidget.qml` and `ui/SandboxDisclosure.qml` implement the Omarchy interface. `ui/Service.qml` only launches the backend and assigns its JSON response to UI properties. There are no `.js` files, but QML still uses small JavaScript event handlers/bindings.
@@ -25,35 +41,55 @@ This does **not** turn microsandbox into a self-contained standalone runtime bin
 
 ## Requirements
 
-- Omarchy with Quickshell and its native plugin API (developed against Omarchy 4.0.4).
+- **Linux with KVM** and Omarchy's Quickshell/native plugin API (developed against Omarchy 4.0.4). This plugin's backend currently targets Linux; macOS and Windows are not supported.
 - An existing, working local **msb 0.7.11** installation, including firmware and KVM permissions.
-- Rust stable, Cargo, and native build tools to compile the backend; users of an already built backend do not need Rust.
+- Rust stable, Cargo, Make, a C/C++ toolchain, CMake, and pkg-config to build the backend. On Arch/Omarchy these are normally provided by `base-devel`, `cmake`, and `pkgconf`; install missing tools yourself through your normal package manager. There is no automatic toolchain or runtime installer.
 - The existing Omarchy terminal launcher for shell and log actions.
 
 If your runtime is upgraded, review SDK compatibility and update the exact SDK dependency and lockfile together before rebuilding. The SDK accesses microsandbox's database, so avoid arbitrary SDK/runtime version mismatches.
 
 ## Build and install
 
+**Source build required.** The repository intentionally does not contain a compiled backend. `omarchy plugin add <git-url> --enable` alone will not build it and is **not** a complete installation method for this plugin. There are no post-install hooks or silent downloads.
+
+Clone the public repository outside your live plugin directory, review it, and build before enabling:
+
 ```sh
+git clone https://github.com/billybonks/omarchy-microsandobx-monitor.git
+cd omarchy-microsandobx-monitor
 make test
 make check
 make install
+# Explicit opt-in: adds the widget to your bar configuration.
 make enable
 ```
 
-`make install` builds with `--locked`, copies only the runtime files into `~/.config/omarchy/plugins/local.microsandbox/`, validates that folder, and rescans plugins. `make enable` adds it to the right section of the bar. No sudo, system service, keybinding, or desktop-shell restart is required.
+`make install` builds with `--locked`, validates the source manifest, copies the executable, QML, and documentation into `~/.config/omarchy/plugins/billybonks.microsandbox-monitor/`, validates that folder, and rescans plugins. `make enable` is the separate step that adds the widget to the right section of the bar. No sudo, system service, keybinding, or desktop-shell restart is required. No sandbox is automatically created, started, stopped, or deleted during installation.
+
+The helper is compiled for your current Linux architecture and links against the system libraries available on the build machine; this is not a promise of a portable static binary. Build on the target machine. The pinned SDK and its transitive dependencies are recorded in `Cargo.lock`.
 
 The Makefile uses `~/.cargo/bin/cargo` by default. Override `CARGO=/path/to/cargo` when necessary.
 
 ```sh
-omarchy bar move local.microsandbox --section right
-omarchy-shell shell summon local.microsandbox '{}'
-omarchy-shell shell hide local.microsandbox
-omarchy plugin disable local.microsandbox
-omarchy plugin remove local.microsandbox
+omarchy bar move billybonks.microsandbox-monitor --section right
+omarchy-shell shell summon billybonks.microsandbox-monitor '{}'
+omarchy-shell shell hide billybonks.microsandbox-monitor
 ```
 
-Removing the plugin does not remove the source checkout, `msb`, or any sandbox.
+## Disable or remove
+
+```sh
+omarchy plugin disable billybonks.microsandbox-monitor
+omarchy plugin remove billybonks.microsandbox-monitor
+```
+
+Removing the plugin does not remove the source checkout, `msb`, or any sandbox. The remove command deletes this plugin's installed directory and its bar entry; it does not reset the rest of your desktop configuration.
+
+### Updates and early local builds
+
+Review upstream changes before running `git pull --ff-only`, `make test`, `make check`, and `make install` again. There is no automatic updater. QML caching can occasionally require a later desktop-shell reload; do not restart the desktop shell just to update this plugin while a workload might depend on that shell's process lifetime.
+
+The initial local prototype used the ID `local.microsandbox`. The publishing ID is **`billybonks.microsandbox-monitor`**. If migrating, disable the old widget explicitly before `make enable` to avoid duplicates. Installing this version does not automatically disable, remove, or rewrite that old installation.
 
 ## Safety boundaries
 
@@ -90,6 +126,14 @@ Memory is guest memory in use / the live guest limit, not the host process's RSS
 ```
 
 Each invocation prints one bounded JSON object with `ok`, `error`, `sandboxes`, `runningCount`, and `truncated`, and exits nonzero on error. Identity values are opaque tokens obtained from `status`. The backend CLI has no confirmation prompt; confirmation is a UI responsibility.
+
+## Publishing
+
+See [the marketplace submission checklist and ready-to-copy listing details](docs/PUBLISHING.md). Marketplace approval is listing validation, **not a security audit**. No marketplace submission is made automatically by building or installing this project.
+
+## License and dependencies
+
+Plugin code and supplied preview images are covered by [MIT](LICENSE). The official microsandbox SDK is Apache-2.0; dependencies retain their own licenses. The project does not bundle the `msb` runtime, firmware, container images, Qt, or Omarchy. Cargo resolves the declared Rust dependencies using the committed lockfile; their build scripts run with the build user's permissions.
 
 ## Validation
 

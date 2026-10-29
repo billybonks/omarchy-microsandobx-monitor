@@ -6,7 +6,7 @@ import qs.Ui
 
 Panel {
     id: root
-    moduleName: "local.microsandbox"
+    moduleName: "billybonks.microsandbox-monitor"
     property var anchorItem: null
     property var hostWidget: null
     property var backend: null

@@ -1,0 +1,59 @@
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config libssl-dev
+      - name: Set up stable Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup default stable
+      - name: Check source package
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          root = Path.cwd()
+          manifest = json.loads(Path('manifest.json').read_text())
+          for key in ('schemaVersion', 'id', 'name', 'version', 'author', 'description', 'kinds', 'entryPoints'):
+              assert key in manifest, f'Missing manifest field: {key}'
+          assert manifest['schemaVersion'] == 1
+          assert manifest['id'] == 'billybonks.microsandbox-monitor'
+          assert manifest['kinds'] == ['bar-widget']
+          assert set(manifest['entryPoints']) == {'barWidget'}
+          for value in manifest['entryPoints'].values():
+              entry = Path(value)
+              assert not entry.is_absolute() and '..' not in entry.parts
+              assert entry.is_file() and not entry.is_symlink()
+              assert entry.resolve().is_relative_to(root)
+          for name in ('README.md', 'LICENSE', 'Cargo.lock', 'preview.png', 'docs/PUBLISHING.md', 'docs/screenshots/collapsed.png', 'docs/screenshots/expanded.png'):
+              assert Path(name).is_file(), f'Missing package file: {name}'
+          for name in ('preview.png', 'docs/screenshots/collapsed.png', 'docs/screenshots/expanded.png'):
+              assert Path(name).read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
+          for name in ('ui/DisclosureWidget.qml', 'ui/SandboxDisclosure.qml'):
+              assert 'moduleName: "' + manifest['id'] + '"' in Path(name).read_text()
+          print('Source package checks passed; official Omarchy validation is run separately on Omarchy.')
+      - name: Check formatting
+        run: cargo fmt -- --check
+      - name: Test
+        run: cargo test --locked
+      - name: Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings

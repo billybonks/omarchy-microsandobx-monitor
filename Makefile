@@ -1,5 +1,6 @@
 CARGO ?= $(HOME)/.cargo/bin/cargo
-PLUGIN_DIR ?= $(HOME)/.config/omarchy/plugins/local.microsandbox
+PLUGIN_ID = billybonks.microsandbox-monitor
+PLUGIN_DIR ?= $(HOME)/.config/omarchy/plugins/$(PLUGIN_ID)
 QML_FILES = ui/DisclosureWidget.qml ui/SandboxDisclosure.qml ui/Service.qml
 
 .PHONY: build test install enable check
@@ -18,8 +19,12 @@ check:
 
 # Only install known runtime files, not the build tree or source checkout.
 install: build
-	install -d "$(PLUGIN_DIR)/bin" "$(PLUGIN_DIR)/ui"
-	install -m 644 README.md LICENSE "$(PLUGIN_DIR)/"
+	omarchy plugin validate .
+	@test ! -L "$(PLUGIN_DIR)" && test ! -L "$(PLUGIN_DIR)/ui" && test ! -L "$(PLUGIN_DIR)/bin" && test ! -L "$(PLUGIN_DIR)/docs" && test ! -L "$(PLUGIN_DIR)/docs/screenshots" || { echo "Refusing to install through a symlink" >&2; exit 1; }
+	install -d "$(PLUGIN_DIR)/bin" "$(PLUGIN_DIR)/ui" "$(PLUGIN_DIR)/docs/screenshots"
+	install -m 644 README.md LICENSE preview.png "$(PLUGIN_DIR)/"
+	install -m 644 docs/PUBLISHING.md "$(PLUGIN_DIR)/docs/"
+	install -m 644 docs/screenshots/*.png "$(PLUGIN_DIR)/docs/screenshots/"
 	install -m 644 $(QML_FILES) "$(PLUGIN_DIR)/ui/"
 	install -m 755 target/release/microsandbox-panel "$(PLUGIN_DIR)/bin/microsandbox-panel.new"
 	mv "$(PLUGIN_DIR)/bin/microsandbox-panel.new" "$(PLUGIN_DIR)/bin/microsandbox-panel"
@@ -28,4 +33,4 @@ install: build
 	omarchy-shell shell rescanPlugins
 
 enable:
-	omarchy plugin enable local.microsandbox --section right
+	omarchy plugin enable $(PLUGIN_ID) --section right
